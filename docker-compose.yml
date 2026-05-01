@@ -58,6 +58,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}        # Change this
       MYSQL_DATABASE: ${DB_NAME}              # Optional: initial database
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
       - "3306:3306"
     volumes:

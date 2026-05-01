@@ -20,7 +20,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 COPY weight_app/src/ /app/src/
-COPY ../functions/helper_functions.py /app/
+COPY functions/helper_functions.py /app/
 WORKDIR /app/src
 
 # Install pip requirements

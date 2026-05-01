@@ -22,15 +22,34 @@ This is a Flask-based web application for tracking weight, calories, and BMR ove
 
 ## 🐳 How to Run with Docker
 
-Configure env file from the env_example file
-
 ```bash
 # Clone the repo
 git clone https://github.com/TheGib123/weight-loss-app
 cd weight-loss-tracker
 
+# Config ENV file
+cp env_example .env
+nano .env
+
 # Build the Docker image
-docker-compose build
+docker-compose build --no-cache
+
+# Run the container
+docker-compose up -d
+```
+
+
+## 🐳 Restart with ENV changes
+
+```bash
+# Remove containers
+docker compose down
+
+# Remove database volume
+rm -rf mysql_database
+
+# Build the Docker image
+docker-compose build --no-cache
 
 # Run the container
 docker-compose up -d
