@@ -256,6 +256,84 @@ def weekly_avg_chart(df):
     graph_html = pio.to_html(fig, full_html=False)
     return graph_html
 
+def monthly_avg_chart(df):
+    month_df = df.copy()
+    month_df['date'] = pd.to_datetime(month_df['date'])
+
+    # Create year-month period
+    month_df['month'] = month_df['date'].dt.to_period('M')
+
+    # Group by month
+    month_df = month_df.groupby('month').agg({
+        'date': ['min', 'max'],
+        'calories': 'mean',
+        'weight': 'mean',
+        'bmr': 'mean'
+    }).reset_index()
+
+    # Flatten columns
+    month_df.columns = ['month', 'month_start', 'month_end', 'calories', 'weight', 'bmr']
+
+    # Format values
+    month_df['calories'] = month_df['calories'].round(0).astype(int)
+    month_df['weight'] = month_df['weight'].round(1)
+
+    # Create labels
+    month_df['month_range'] = month_df['month_start'].dt.strftime('%b %Y')
+    month_df['x_name'] = month_df['month_range']
+
+    # Plot
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=month_df['x_name'],
+        y=month_df['weight'],
+        mode='lines+markers',
+        name='Weight (lbs)',
+        line=dict(color='blue'),
+        yaxis='y1'
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=month_df['x_name'],
+        y=month_df['calories'],
+        mode='lines+markers',
+        name='Calories',
+        line=dict(color='green'),
+        yaxis='y2'
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=month_df['x_name'],
+        y=month_df['bmr'],
+        mode='lines',
+        name='BMR',
+        line=dict(color='red', dash='dash'),
+        yaxis='y2'
+    ))
+
+    fig.update_layout(
+        title='Monthly Weight AVG, Calorie Intake AVG, BMR AVG',
+        xaxis=dict(title='Month'),
+        yaxis=dict(
+            title=dict(text='Weight (lbs)', font=dict(color='blue')),
+            tickfont=dict(color='blue')
+        ),
+        yaxis2=dict(
+            title=dict(text='Calories', font=dict(color='green')),
+            tickfont=dict(color='green'),
+            overlaying='y',
+            side='right'
+        ),
+        legend=dict(x=0.5, y=1.15, orientation='h', xanchor='center'),
+        margin=dict(t=80),
+        hovermode='x unified',
+        template='plotly_white'
+    )
+
+    graph_html = pio.to_html(fig, full_html=False)
+    return graph_html
+
 
 def calorie_weight_change(df):
     # ----- Processing -----

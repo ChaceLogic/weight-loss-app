@@ -54,3 +54,14 @@ docker-compose build --no-cache
 # Run the container
 docker-compose up -d
 ```
+
+## First import from loseit
+
+Use loseit's API below and upload the files through the Data Import tool
+
+|             |               |                                                                     |
+| :---        | :---          | :---                                                                |
+| Weight      | API           | https://www.loseit.com/export/details/weight?days={DAY_VAR}         |
+|             | API Example   | https://www.loseit.com/export/details/weight?days=168               |
+| Calories    | API           | https://www.loseit.com/export/details/foodcalories?days={DAY_VAR}   |
+|             | API Example   | https://www.loseit.com/export/details/foodcalories?days=168         |

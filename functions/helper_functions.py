@@ -61,6 +61,7 @@ def get_age(weigh_in_date):
 
 
 def push_dfs_to_db(df_weight, df_calories):
+    print('READING DATA FROM FILES')
     df_weight['weight_date'] = pd.to_datetime(df_weight['Date']).dt.date
     df_calories['calorie_date'] = pd.to_datetime(df_calories['Date']).dt.date
     del df_weight['Date']
@@ -71,11 +72,12 @@ def push_dfs_to_db(df_weight, df_calories):
     df.rename(columns={'weight_date': 'date', 'Weight':'weight', 'Food Calories':'calories'}, inplace=True)
     df = df.sort_values(by='date')
     df['age'] = df['date'].apply(get_age)
-    print(df.head())
     df['bmr'] = 10 * (df['weight'] * 0.45359237) + 6.25 * (HEIGHT * 2.54) - 5 * df['age'] + 5
-    #df['bmr'] = 10 * (df['weight'] * 0.45359237) + 6.25 * (HEIGHT * 2.54) - 5 * 29 + 5
     df['bmr'] = df['bmr'].round(0).astype(int)
-
+    print(df.head())
+    print('DATA IMPORTED TO FROM FILES SUCCESSFUL')
+    
+    print('PUSHING DATA TO DATABASE')
     for _, row in df.iterrows():
         date = row['date']
         calories = row['calories']
@@ -83,3 +85,4 @@ def push_dfs_to_db(df_weight, df_calories):
         weight = row['weight']
         q = f'REPLACE INTO entries (date, calories, bmr, weight) VALUES ("{date}", {calories}, {bmr}, {weight})'
         execute_query(q)
+    print('DATA PUSH TO DATABASE SUCCESSFUL')

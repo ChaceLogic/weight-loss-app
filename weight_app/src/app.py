@@ -158,6 +158,16 @@ def weekly_avg_chart():
         graph_html = charts.weekly_avg_chart(df)
         return render_template('chart.html', graph_html=graph_html)
 
+@app.route('/monthly_avg_chart')
+def monthly_avg_chart():  
+    df = pd.read_sql_query('SELECT date, calories, weight, bmr FROM entries ORDER BY date', hf.get_connection())      
+    if (df.empty):
+        flash('No data available for chart.', 'danger')
+        return redirect('/')
+    else:
+        graph_html = charts.monthly_avg_chart(df)
+        return render_template('chart.html', graph_html=graph_html)
+
 
 @app.route('/calorie_weight_scatter')
 def calorie_weight_scatter():
