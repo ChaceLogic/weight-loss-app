@@ -411,54 +411,96 @@ def calories_distribution(df, bin_size=100):
     return fig.to_html(full_html=False, include_plotlyjs='cdn')
 
 
-def forecast_weight(df, target_date=None):
+def forecast_weight(df, target_date=None, trend_days=30):
     if target_date is None:
         target_date = datetime.now().date() + timedelta(days=30)
 
-    df = df.sort_values(by='date')  # Ensure DataFrame is sorted by date
-    dates = df['date'].tolist()  # Use dates from the DataFrame
+    trend_date = datetime.now().date() - timedelta(days=trend_days)
 
-    # Convert datetime objects to numerical format (days since start)
-    start_date = min(dates)
-    x_numeric = [(date - start_date).days for date in dates]
-    y = df['weight'].tolist()  # Use weight data from the DataFrame
+    df = df.sort_values(by='date')
 
-    # Perform linear regression
+    # --- FULL DATA (for plotting history) ---
+    all_dates = df['date'].tolist()
+    all_weights = df['weight'].tolist()
+
+    # --- FILTERED DATA (for regression only) ---
+    trend_df = df[df['date'] >= trend_date]
+
+    # Safety check (avoid crash if not enough data)
+    if len(trend_df) < 2:
+        trend_df = df.tail(2)
+
+    trend_dates = trend_df['date'].tolist()
+    trend_weights = trend_df['weight'].tolist()
+
+    # Use trend start as base for regression
+    start_date = min(trend_dates)
+    x_numeric = [(date - start_date).days for date in trend_dates]
+    y = trend_weights
+
+    # --- Linear regression on TREND ONLY ---
     slope, intercept, r, p, std_err = stats.linregress(x_numeric, y)
 
     def myfunc(x):
         return slope * x + intercept
 
-    mymodel = [myfunc(x) for x in x_numeric]
+    # Model line ONLY for trend window
+    trend_model = [myfunc(x) for x in x_numeric]
 
+    # --- Prediction ---
     target_numeric_date = (target_date - start_date).days
-    predicted_weight = round(myfunc(target_numeric_date),1)
+    predicted_weight = round(myfunc(target_numeric_date), 1)
 
-    # Generate forecasted dates up to target_date
-    forecast_dates = [start_date + pd.Timedelta(days=i) for i in range(max(x_numeric), target_numeric_date + 1)]
-    forecast_weights = [myfunc(i) for i in range(max(x_numeric), target_numeric_date + 1)]
+    # --- Forecast starts from LAST TREND POINT ---
+    last_trend_day = max(x_numeric)
 
-    # Create interactive plot with Plotly
+    forecast_range = range(last_trend_day, target_numeric_date + 1)
+    forecast_dates = [start_date + timedelta(days=i) for i in forecast_range]
+    forecast_weights = [myfunc(i) for i in forecast_range]
+
+    # --- Plot ---
     fig = go.Figure()
 
-    # Scatter plot for weight data
-    fig.add_trace(go.Scatter(x=dates, y=y, mode='lines+markers', name='Weight (lbs)', line=dict(color='blue')))
+    # Full historical data (blue)
+    fig.add_trace(go.Scatter(
+        x=all_dates,
+        y=all_weights,
+        mode='lines+markers',
+        name='Weight (lbs)',
+        line=dict(color='gray')
+    ))
 
-    # Line plot for regression line
-    fig.add_trace(go.Scatter(x=dates, y=mymodel, mode='lines', name='Model Line', line=dict(color='gray')))
+    # Trend line (gray) ONLY over last 30 days
+    fig.add_trace(go.Scatter(
+        x=trend_dates,
+        y=trend_model,
+        mode='lines',
+        name=f'Trend (last {trend_days} days)',
+        line=dict(color='blue')
+    ))
 
-    # Forecasted green line up to target_date
-    fig.add_trace(go.Scatter(x=forecast_dates, y=forecast_weights, mode='lines+markers', name='Forecasted Weight', line=dict(color='green')))
+    # Forecast (green)
+    fig.add_trace(go.Scatter(
+        x=forecast_dates,
+        y=forecast_weights,
+        mode='lines+markers',
+        name='Forecasted Weight',
+        line=dict(color='green')
+    ))
 
-    # Customize layout
-    fig.update_layout(title="Weight Over Time",
-                    xaxis_title="Date",
-                    yaxis_title="Weight",
-                    xaxis=dict(tickformat="%Y-%m-%d"),
-                    legend=dict(x=0.5, y=1.15, orientation='h', xanchor='center'),
-                    margin=dict(t=80),
-                    hovermode='x unified',
-                    template='plotly_white')
+    fig.update_layout(
+        title="Weight Trend & Forecast",
+        xaxis_title="Date",
+        yaxis_title="Weight",
+        xaxis=dict(tickformat="%Y-%m-%d"),
+        legend=dict(x=0.5, y=1.15, orientation='h', xanchor='center'),
+        margin=dict(t=80),
+        hovermode='x unified',
+        template='plotly_white'
+    )
 
-    return fig.to_html(full_html=False, include_plotlyjs='cdn'), target_date.strftime('%m-%d-%Y'), predicted_weight
-
+    return (
+        fig.to_html(full_html=False, include_plotlyjs='cdn'),
+        target_date.strftime('%m-%d-%Y'),
+        predicted_weight
+    )

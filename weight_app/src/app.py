@@ -204,25 +204,59 @@ def calories_distribution():
 
 @app.route('/forecast_weight', methods=['GET', 'POST'])
 def forecast_weight():
-    df = pd.read_sql_query('SELECT date, calories, weight, bmr FROM entries ORDER BY date', hf.get_connection())      
-    if (df.empty):
+    df = pd.read_sql_query(
+        'SELECT date, calories, weight, bmr FROM entries ORDER BY date',
+        hf.get_connection()
+    )
+
+    if df.empty:
         flash('No data available for chart.', 'danger')
         return redirect('/')
-    else:
-        if request.method == 'POST':
-            forecast_date = request.form.get('forecast_date')
-            forecast_date = datetime.strptime(forecast_date, "%Y-%m-%d").date()
-            now = datetime.now().date()
-            if now > forecast_date:
-                flash('Forecast date must be in the future!', 'danger')
+
+    forecast_date = None
+    model_start_days = None
+
+    if request.method == 'POST':
+        # --- Get raw inputs ---
+        forecast_date_str = request.form.get('forecast_date')
+        model_start_days_str = request.form.get('model_start_days')
+
+        # --- Parse forecast date ---
+        if forecast_date_str:
+            try:
+                forecast_date = datetime.strptime(forecast_date_str, "%Y-%m-%d").date()
+                if forecast_date <= datetime.now().date():
+                    flash('Forecast date must be in the future!', 'danger')
+                    return redirect('/forecast_weight')
+            except ValueError:
+                flash('Invalid forecast date format.', 'danger')
                 return redirect('/forecast_weight')
-            else:
-                graph_html, target_date, predicted_weight = charts.forecast_weight(df, forecast_date)
-                return render_template('chart.html', graph_html=graph_html, forecast_weight=True, target_date=target_date, predicted_weight=predicted_weight)
-            
-        else:    
-            graph_html, target_date, predicted_weight = charts.forecast_weight(df)
-            return render_template('chart.html', graph_html=graph_html, forecast_weight=True, target_date=target_date, predicted_weight=predicted_weight)
+
+        # --- Parse model start days ---
+        if model_start_days_str:
+            try:
+                model_start_days = int(model_start_days_str)
+            except ValueError:
+                flash('Model days must be a number.', 'danger')
+                return redirect('/forecast_weight')
+
+    # --- Build kwargs dynamically ---
+    kwargs = {}
+    if forecast_date:
+        kwargs['target_date'] = forecast_date
+    if model_start_days:
+        kwargs['trend_days'] = model_start_days
+
+    # --- Single function call ---
+    graph_html, target_date, predicted_weight = charts.forecast_weight(df, **kwargs)
+
+    return render_template(
+        'chart.html',
+        graph_html=graph_html,
+        forecast_weight=True,
+        target_date=target_date,
+        predicted_weight=predicted_weight
+    )
 
 
 if __name__ == '__main__':
